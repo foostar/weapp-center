@@ -43,6 +43,15 @@ const isAuthedMiddleware = fn => (req, res, next) => {
         })
 }
 
+const formatParams = (params) => {
+    params = Object.assign({}, params, {
+        accessToken: params.token,
+        accessSecret: params.secret
+    })
+    delete params.token
+    delete params.secret
+    return params
+}
 app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) => {
     const uri = req.params.uri
     proxy.web(req, res, {
@@ -85,30 +94,36 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
+                console.log(body.list[3])
             const data = {
                 meta: {
                     page: body.page,
                     total: body.total_num
                 },
                 list: body.list.map(x => ({
-                    id: x.source_type === 'topic' ? x.source_id : x.source_id,
-                    forumId: x.board_id,
-                    forumName: x.board_name,
+                    id: x.source_id,
+                    type: x.source_type == 'news' ? 'article' : 'post',
+                    forumId: x.board_id || '',
+                    forumName: x.board_name || '',
                     title: x.title,
                     topTopicList: x.topTopicList,
                     user: {
                         id: x.user_id,
                         nickname: x.user_nick_name,
                         avatar: x.userAvatar,
-                        title: x.userTitle
+                        title: x.userTitle || '',
+                        verify: x.verify || []
                     },
-                    repliedAt: new Date(+x.last_reply_date),
+                    repliedAt: new Date(+x.last_reply_date) || '',
                     views: x.hits,
                     replies: x.replies,
                     subject: x.summary,
                     gender: x.gender,
                     images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
-                    zans: x.zanList
+                    zans: x.zanList || new Array(x.recommendAdd),
+                    zones: x.distance || '',
+                    distance: x.location || '',
+                    redirect: x.redirectUrl || ''
                 }))
             }
             res.json(data)
@@ -195,7 +210,183 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
 
 })
 
+//文章详情接口
+app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
+    const {
+        page,
+        json
+    } = req.query
 
+    const {
+        id,
+        appId
+    } = req.params
+    let options
+    try {
+        options = JSON.parse(req.query.options)
+    }
+    catch (e) {
+        options = {}
+    }
+    options = formatParams(options)
+    let params = Object.assign({}, options,{
+            json: JSON.stringify({
+                id,
+                idType:'aid',
+                pageSize:20,
+                page:parseInt(page)
+            })
+        })
+    try {
+        options = Object.assign({
+            page,
+            aid:id,
+            appId,
+            json
+        }, options)
+    } catch (err) {
+        options = {}
+    }
+    
+    let result
+    cmsAPI.appBBS(appId).then((data) => {
+        request({
+            url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/newsview&${raw(options)}`,
+            json: true
+        }, (err, response, body) => {
+            if (err) return next(err)
+            result = body.body.newsInfo
+            result.content && result.content.forEach((v) => {
+                if (v.type == 'image') {
+                    v.type = 1
+                    v.content = v.content.replace('xgsize_', 'mobcentSmallPreview_')
+                    delete v.extraInfo
+
+                } else {
+                    v.type = 0
+                }
+            })
+
+            request({
+                url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/commentlist&${raw(params)}`,
+                json: true
+            }, (err, response, body) => {
+                if (err) return next(err)
+                console.log("body",body)
+                const data = {
+                    type: 'article',
+                    allowComment: result.allowComment,
+                    redirectUrl: result.redirectUrl,
+                    title: result.title,
+                    createAt: result.dateline,
+                    author: result.author,
+                    views: result.viewNum,
+                    replies: result.commentNum,
+                    page: result.pageCount,
+                    forumName: result.from,
+                    content: result.content,
+                    colleted: parseInt(result.is_favor),
+                    like: 2,
+                    authorAvatar: result.avatar,
+                    userId: result.uid,
+                    catName: result.catName,
+                    sex: result.gender,
+                    zanList: [],
+                    list: body.list || [],
+                    totalNum:body.count || 0
+                }
+                
+                res.json(data)
+            })
+            
+        })
+    })
+})
+//帖子详情接口
+app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
+    const {
+        boardId,
+        page,
+        pageSize,
+        topicId
+    } = req.query
+
+    const {
+        id,
+        appId
+    } = req.params
+    let options
+    try {
+        options = JSON.parse(req.query.options)
+    }
+    catch (e) {
+        options = {}
+    }
+    options = formatParams(options)
+    try {
+        options = Object.assign({
+            boardId,
+            page,
+            pageSize,
+            topicId
+        }, options)
+    } catch (err) {
+        options = {}
+    }
+    
+    let result
+    cmsAPI.appBBS(appId).then((data) => {
+        request({
+            url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/postlist&${raw(options)}`,
+            json: true
+        }, (err, response, body) => {
+            if (err) return next(err)
+            let data
+            if (page == 1){
+                const result = body.topic
+                result.content && result.content.forEach((v) => {
+                    v.content = v.infor
+                    v.content = v.content.replace('xgsize_', 'mobcentSmallPreview_')
+                })
+                data = {
+                    type: 'post',
+                    allowComment: 1,
+                    redirectUrl: '',
+                    title: result.title,
+                    createAt: result.create_date,
+                    author: result.user_nick_name,
+                    views: result.hits,
+                    replies: result.replies,
+                    page: body.page,
+                    forumName: body.forumName,
+                    content: result.content,
+                    colleted: parseInt(result.is_favor),
+                    like: 0,
+                    boardId:body.boardId,
+                    authorAvatar: result.icon,
+                    userId: result.user_id,
+                    isFollow: result.isFollow,
+                    level:result.level,
+                    userTitle:result.userTitle,
+                    userColor:result.userColor,
+                    catName: "",
+                    sex: result.gender,
+                    zanList:result.zanList,
+                    list: body.list,
+                    totalNum:body.total_num || 0,
+                    id:result.topic_id
+                }
+            } else {
+                data = {
+                   page: body.page,
+                   list: body.list,
+                   totalNum:body.total_num || 0 
+                }
+            }
+            res.json(data)
+        })
+    })
+})
 // https.createServer({
 //     key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
 //     cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
