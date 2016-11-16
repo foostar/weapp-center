@@ -94,7 +94,6 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-                console.log(body.list[3])
             const data = {
                 meta: {
                     page: body.page,
@@ -272,7 +271,6 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
                 json: true
             }, (err, response, body) => {
                 if (err) return next(err)
-                console.log("body",body)
                 const data = {
                     type: 'article',
                     allowComment: result.allowComment,
