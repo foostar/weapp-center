@@ -94,7 +94,6 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-                console.log("aaa")
             const data = {
                 meta: {
                     page: body.page,
