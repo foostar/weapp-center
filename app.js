@@ -121,7 +121,7 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
                     gender: x.gender,
                     reply: x.reply || [],
                     images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
-                    zans: x.zanList || new Array(x.recommendAdd),
+                    zanList: x.zanList || new Array(x.recommendAdd),
                     recommendAdd: x.recommendAdd || 0,
                     zones: x.distance || '',
                     distance: x.location || '',
