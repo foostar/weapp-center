@@ -94,6 +94,7 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
+                console.log("aaa")
             const data = {
                 meta: {
                     page: body.page,
@@ -118,8 +119,10 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
                     replies: x.replies,
                     subject: x.summary,
                     gender: x.gender,
+                    reply: x.reply || [],
                     images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
                     zans: x.zanList || new Array(x.recommendAdd),
+                    recommendAdd: x.recommendAdd || 0,
                     zones: x.distance || '',
                     distance: x.location || '',
                     redirect: x.redirectUrl || ''
@@ -185,9 +188,11 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
                     replies: x.replies,
                     subject: x.subject,
                     gender: x.gender,
+                    reply: x.reply || [],
+                    recommendAdd: x.recommendAdd || 0,
                     images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
-                    zans: x.zanList
-                }))
+                    zanList: x.zanList
+                })),
             }
             data.topTopicList = body.topTopicList
             const forumInfo = body.forumInfo
@@ -265,7 +270,6 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
                     v.type = 0
                 }
             })
-
             request({
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/commentlist&${raw(params)}`,
                 json: true
@@ -289,11 +293,10 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
                     userId: result.uid,
                     catName: result.catName,
                     sex: result.gender,
-                    zanList: [],
+                    zanList: x.zanList,
                     list: body.list || [],
                     totalNum:body.count || 0
                 }
-                
                 res.json(data)
             })
             
@@ -385,10 +388,10 @@ app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), (re
         })
     })
 })
-// https.createServer({
-//     key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
-//     cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
-// }, app).listen(443)
+https.createServer({
+    key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
+    cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
+}, app).listen(443)
 
-app.listen(3000)
+// app.listen(3000)
 
