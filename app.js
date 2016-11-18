@@ -388,10 +388,15 @@ app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), (re
         })
     })
 })
-https.createServer({
-    key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
-    cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
-}, app).listen(443)
+if(process.env.NODE_ENV === 'production'){
+    app.listen(3000)
+} else {
+    https.createServer({
+        key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
+        cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
+    }, app).listen(443)
+}
 
-// app.listen(3000)
+
+// 
 
