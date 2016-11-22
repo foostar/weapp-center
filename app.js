@@ -6,6 +6,7 @@ const https = require('https')
 const request = require('request')
 const fetch = require('node-fetch')
 const cms = require('xiaoyun-cmsapi')
+const { formatParams, formatList, formatNewsList, formatArticle, formatPost } = require('./utils/util.js')
 
 const app = express()
 
@@ -15,7 +16,6 @@ const cmsAPI = new cms.API('http://cmsapi.app.xiaoyun.com/GpCmsApi', '100002', '
     cache: false,
     fetch
 })
-
 const raw = (args, up) =>
     Object.keys(args)
         .sort()
@@ -43,15 +43,6 @@ const isAuthedMiddleware = fn => (req, res, next) => {
         })
 }
 
-const formatParams = (params) => {
-    params = Object.assign({}, params, {
-        accessToken: params.token,
-        accessSecret: params.secret
-    })
-    delete params.token
-    delete params.secret
-    return params
-}
 app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) => {
     const uri = req.params.uri
     proxy.web(req, res, {
@@ -60,7 +51,7 @@ app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) =
         ignorePath: true
     })
 })
-
+// 门户、文章列表
 app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
     const {
         sort,
@@ -94,44 +85,11 @@ app.get('/api/:appId/news/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-            const data = {
-                meta: {
-                    page: body.page,
-                    total: body.total_num
-                },
-                list: body.list.map(x => ({
-                    id: x.source_id,
-                    type: x.source_type == 'news' ? 'article' : 'post',
-                    forumId: x.board_id || '',
-                    forumName: x.board_name || '',
-                    title: x.title,
-                    topTopicList: x.topTopicList,
-                    user: {
-                        id: x.user_id,
-                        nickname: x.user_nick_name,
-                        avatar: x.userAvatar,
-                        title: x.userTitle || '',
-                        verify: x.verify || []
-                    },
-                    repliedAt: new Date(+x.last_reply_date) || '',
-                    views: x.hits,
-                    replies: x.replies,
-                    subject: x.summary,
-                    gender: x.gender,
-                    reply: x.reply || [],
-                    images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
-                    zanList: x.zanList || new Array(x.recommendAdd),
-                    recommendAdd: x.recommendAdd || 0,
-                    zones: x.distance || '',
-                    distance: x.location || '',
-                    redirect: x.redirectUrl || ''
-                }))
-            }
-            res.json(data)
+            res.json(formatNewsList(body))
         })
     })
 })
-
+// 帖子列表
 app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
     const {
         sort,
@@ -166,48 +124,7 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-            const data = {
-                meta: {
-                    page: body.page,
-                    total: body.total_num
-                },
-                list: body.list.map(x => ({
-                    id: x.topic_id,
-                    forumId: x.board_id,
-                    forumName: x.board_name,
-                    title: x.title,
-                    user: {
-                        id: x.user_id,
-                        nickname: x.user_nick_name,
-                        avatar: x.userAvatar,
-                        title: x.userTitle
-                    },
-                    repliedAt: new Date(+x.last_reply_date),
-                    views: x.hits,
-                    replies: x.replies,
-                    subject: x.subject,
-                    gender: x.gender,
-                    reply: x.reply || [],
-                    recommendAdd: x.recommendAdd || 0,
-                    images: x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')),
-                    zanList: x.zanList
-                })),
-            }
-            data.topTopicList = body.topTopicList
-            const forumInfo = body.forumInfo
-            if (forumInfo) {
-                data.forum = {
-                    id: forumInfo.id,
-                    name: forumInfo.title,
-                    description: forumInfo.description,
-                    icon: forumInfo.icon,
-                    todayPosts: forumInfo.td_posts_num,
-                    totalPosts: forumInfo.posts_total_num,
-                    totalTopics: forumInfo.topic_total_num,
-                    isFocus: forumInfo.is_focus
-                }
-            }
-            res.json(data)
+            res.json(formatList(body))
         })
     })
 
@@ -219,7 +136,7 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
         page,
         json
     } = req.query
-
+    console.log(page,json)
     const {
         id,
         appId
@@ -274,29 +191,7 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
                 json: true
             }, (err, response, body) => {
                 if (err) return next(err)
-                const data = {
-                    type: 'article',
-                    allowComment: result.allowComment,
-                    redirectUrl: result.redirectUrl,
-                    title: result.title,
-                    createAt: result.dateline,
-                    author: result.author,
-                    views: result.viewNum,
-                    replies: result.commentNum,
-                    page: result.pageCount,
-                    forumName: result.from,
-                    content: result.content,
-                    colleted: parseInt(result.is_favor),
-                    like: 2,
-                    authorAvatar: result.avatar,
-                    userId: result.uid,
-                    catName: result.catName,
-                    sex: result.gender,
-                    zanList: x.zanList,
-                    list: body.list || [],
-                    totalNum:body.count || 0
-                }
-                res.json(data)
+                res.json(formatArticle(result, body))
             })
             
         })
@@ -341,52 +236,77 @@ app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), (re
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-            let data
-            if (page == 1){
-                const result = body.topic
-                result.content && result.content.forEach((v) => {
-                    v.content = v.infor
-                    v.content = v.content.replace('xgsize_', 'mobcentSmallPreview_')
-                })
-                data = {
-                    type: 'post',
-                    allowComment: 1,
-                    redirectUrl: '',
-                    title: result.title,
-                    createAt: result.create_date,
-                    author: result.user_nick_name,
-                    views: result.hits,
-                    replies: result.replies,
-                    page: body.page,
-                    forumName: body.forumName,
-                    content: result.content,
-                    colleted: parseInt(result.is_favor),
-                    like: 0,
-                    boardId:body.boardId,
-                    authorAvatar: result.icon,
-                    userId: result.user_id,
-                    isFollow: result.isFollow,
-                    level:result.level,
-                    userTitle:result.userTitle,
-                    userColor:result.userColor,
-                    catName: "",
-                    sex: result.gender,
-                    zanList:result.zanList,
-                    list: body.list,
-                    totalNum:body.total_num || 0,
-                    id:result.topic_id
-                }
-            } else {
-                data = {
-                   page: body.page,
-                   list: body.list,
-                   totalNum:body.total_num || 0 
-                }
-            }
-            res.json(data)
+            res.json(formatPost(page, body))
         })
     })
 })
+// 搜索帖子
+app.get('/api/:appId/forum/search', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
+    const {
+        appId
+    } = req.params
+    const {
+        keyword,
+        page,
+        pageSize,
+        searchid
+    } = req.query
+    let options
+    try {
+        options = Object.assign({
+            keyword,
+            page,
+            pageSize,
+            searchid
+        }, JSON.parse(req.query.options))
+    } catch (err) {
+        options = {}
+    }
+    cmsAPI.appBBS(appId).then((data) => {
+        request({
+            url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/search&${raw(options)}`,
+            json: true
+        }, (err, response, body) => {
+            if (err) return next(err)
+            res.json(formatList(body))
+        })
+    })
+    
+})
+// 搜索文章
+app.get('/api/:appId/portal/search', isAuthedMiddleware(req => req.params.appId), (req, res, next) => {
+    const {
+        appId
+    } = req.params
+    const {
+        keyword,
+        page,
+        pageSize,
+        searchid
+    } = req.query
+    let options
+    try {
+        options = Object.assign({
+            keyword,
+            page,
+            pageSize,
+            searchid
+        }, JSON.parse(req.query.options))
+    } catch (err) {
+        options = {}
+    }
+    cmsAPI.appBBS(appId).then((data) => {
+        request({
+            url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/search&${raw(options)}`,
+            json: true
+        }, (err, response, body) => {
+            if (err) return next(err)
+            res.json(formatNewsList(body))
+        })
+    })
+    
+})
+// 项目启动
 if(process.env.NODE_ENV === 'production'){
     app.listen(3000)
 } else {
