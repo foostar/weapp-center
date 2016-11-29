@@ -6,7 +6,7 @@ const https = require('https')
 const request = require('request')
 const fetch = require('node-fetch')
 const cms = require('xiaoyun-cmsapi')
-const { formatParams, formatList, formatNewsList, formatArticle, formatPost } = require('./utils/util.js')
+const { formatParams, formatList, formatNewsList, formatArticle, formatPost, formatArticleList } = require('./utils/util.js')
 
 const app = express()
 
@@ -101,9 +101,7 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
         appId,
         forumId
     } = req.params
-
     let options = req.query.options
-
     try {
         options = Object.assign({
             circle: 1,
@@ -117,7 +115,7 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
     } catch (err) {
         options = {}
     }
-
+    console.log(options)
     cmsAPI.appBBS(appId).then((data) => {
         request({
             url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/topiclist&${raw(options)}`,
@@ -136,7 +134,6 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
         page,
         json
     } = req.query
-    console.log(page,json)
     const {
         id,
         appId
@@ -228,7 +225,7 @@ app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), (re
     } catch (err) {
         options = {}
     }
-    
+    console.log("options", options)
     let result
     cmsAPI.appBBS(appId).then((data) => {
         request({
@@ -301,7 +298,8 @@ app.get('/api/:appId/portal/search', isAuthedMiddleware(req => req.params.appId)
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-            res.json(formatNewsList(body))
+                console.log("body", body)
+            res.json(formatArticleList(body))
         })
     })
     

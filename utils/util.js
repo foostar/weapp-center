@@ -10,7 +10,6 @@ const formatParams = (params) => {
 }
 /* 格式化帖子列表 */
 const formatList = (body) => {
-    console.log("body", body)
     const data = {
         meta: {
             page: body.page,
@@ -136,6 +135,7 @@ const formatPost = (page, body) => {
     let data
     if (page == 1){
         const result = body.topic
+        console.log(result)
         result.content && result.content.forEach((v) => {
             v.content = v.infor
             v.content = v.content.replace('xgsize_', 'mobcentSmallPreview_')
@@ -166,7 +166,8 @@ const formatPost = (page, body) => {
             zanList:result.zanList,
             list: body.list || [],
             totalNum:body.total_num || 0,
-            id:result.topic_id
+            id:result.topic_id,
+            poll: result.poll_info || {}
         }
     } else {
         data = {
@@ -177,10 +178,36 @@ const formatPost = (page, body) => {
     }
     return data
 }
+/* 格式化文章列表 */
+const formatArticleList = (body) => {
+    const data = {
+        type: 'article',
+        meta: {
+            page: body.page,
+            total: body.total_num
+        },
+        list: body.list && body.list.map(x => ({
+            id: x.aid || 0,
+            title: x.title || "",
+            user:{
+                id: x.user_id || 0,
+                nickname: x.user_nick_name,
+                avatar: x.userAvatar || '',
+            },
+            views: x.hits,
+            subject: x.summary,
+            gender: x.gender,
+            repliedAt: new Date(+x.dateline) || "",
+            images: x.imageList && x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')) || new Array(x.pic_path) || [],
+        }))
+    }
+    return data
+}
 module.exports = {
     formatParams,
     formatList,
     formatNewsList,
     formatArticle,
-    formatPost
+    formatPost,
+    formatArticleList
 }
