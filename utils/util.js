@@ -135,7 +135,6 @@ const formatPost = (page, body) => {
     let data
     if (page == 1){
         const result = body.topic
-        console.log(result)
         result.content && result.content.forEach((v) => {
             v.content = v.infor
             v.content = v.content.replace('xgsize_', 'mobcentSmallPreview_')
