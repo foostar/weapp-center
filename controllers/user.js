@@ -185,17 +185,11 @@ exports.platformLogin = (req, res, next) => {
         }
         const sessionData = JSON.parse(result)
         return new Promise((reslove, reject) => {
-            // 根据appId拿到froumkey
-            // request({
-            //     url: `http://cmsapi.app.xiaoyun.com/GpCmsApi/app/getAppById.do?appId=${xyAppId}`,
-            //     json: true
-            // }, (err, response, body) => {
-            //     console.log(body)
-            //     if (err) reject(err)
-            // })
-            let forumKey = 'wx4f4bc4dec97d474b'
-            // 获取appid
-            reslove({forumKey, sessionData})
+            cmsAPI.appInfo(xyAppId).then((data) => {
+                reslove({forumKey: data.forumKey, sessionData})
+            },(err) => {
+                reject(err)
+            })
         })  
     })
     .then((data) => {

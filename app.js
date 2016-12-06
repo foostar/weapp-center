@@ -57,8 +57,10 @@ app.get('/api/:appId/article/:id', isAuthedMiddleware(req => req.params.appId), 
  */
 // 帖子列表
 app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params.appId), Postlist.postlist)
-//帖子详情接口
+// 帖子详情接口
 app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), Postlist.postDetail)
+// 关注列表
+app.get('/api/:appId/followlist', isAuthedMiddleware(req => req.params.appId), Postlist.followList)
 
 
 app.use((err, req, res, next) => {

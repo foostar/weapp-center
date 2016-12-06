@@ -15,7 +15,7 @@ const formatList = (body) => {
             page: body.page,
             total: body.total_num
         },
-        list: body.list.map(x => ({
+        list: body.list && body.list.map(x => ({
             id: x.topic_id,
             forumId: x.board_id,
             forumName: x.board_name,
@@ -28,6 +28,7 @@ const formatList = (body) => {
             },
             repliedAt: new Date(+x.last_reply_date),
             views: x.hits,
+            from: x.from || '',
             replies: x.replies,
             subject: x.subject,
             gender: x.gender,
@@ -64,8 +65,8 @@ const formatList = (body) => {
 const formatNewsList = (body) => {
     const data = {
         meta: {
-            page: body.page,
-            total: body.total_num
+            page: body.page || 1,
+            total: body.total_num || 0
         },
         list: body.list && body.list.map(x => ({
             id: x.source_id || x.topic_id || '',
@@ -198,7 +199,7 @@ const formatArticleList = (body) => {
             gender: x.gender,
             repliedAt: new Date(+x.dateline) || "",
             images: x.imageList && x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')) || new Array(x.pic_path) || [],
-        }))
+        })) || []
     }
     return data
 }
