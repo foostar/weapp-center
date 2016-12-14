@@ -1,9 +1,11 @@
 const fetch = require('node-fetch')
 const cms = require('xiaoyun-cmsapi')
-const cmsAPI = new cms.API('http://cmsapi.app.xiaoyun.com/GpCmsApi', '100002', '8F97093B9DE32CBA569EAD6456C32A', {
-    cache: false,
-    fetch
-})
+const config = require('../config/index')
+const cmsAPI = new cms.API(config.cms_url, '100002', '8F97093B9DE32CBA569EAD6456C32A', {
+        cache: false,
+        fetch
+    })
+
 const raw = (args, up) =>
     Object.keys(args)
         .sort()

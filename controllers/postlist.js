@@ -37,6 +37,7 @@ exports.postlist = (req, res, next) => {
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
+
             res.json(formatList(body))
         })
     })

@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node app"
+    "start": "node app",
+    "test": "NODE_ENV=test node app"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +16,6 @@
     "promise": "^7.1.1",
     "redis": "^2.6.3",
     "request": "^2.78.0",
-    "xiaoyun-cmsapi": "0.1.5"
+    "xiaoyun-cmsapi": "0.1.7"
   }
 }

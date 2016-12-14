@@ -12,6 +12,13 @@ const { raw, isAuthed, isAuthedMiddleware, cmsAPI } = require("./middleware/midd
 const app = express()
 
 var proxy = httpProxy.createProxyServer()
+app.all("*", (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*")
+    res.header("Access-Control-Allow-Headers", "X-Requested-With")
+    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS")
+    res.header("Content-Type", "application/json;charset=utf-8")
+    next()
+})
 /*
  * @url转发
  */
@@ -23,9 +30,6 @@ app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) =
         ignorePath: true
     })
 })
-/*
- * @common相关
- */
 // 搜索帖子
 app.get('/api/:appId/forum/search', isAuthedMiddleware(req => req.params.appId), Common.searchPost)
 // 搜索文章
@@ -40,11 +44,13 @@ app.get('/api/:appId/onLogin', isAuthedMiddleware(req => req.params.appId), User
 // 验证session
 app.get('/api/:appId/checkLogin', isAuthedMiddleware(req => req.params.appId), User.checkLogin)
 // 验证用户信息
-app.get('/api/:appId/authUser', isAuthedMiddleware(req => req.params.appId), User.authUser)
+// app.get('/api/:appId/authUser', isAuthedMiddleware(req => req.params.appId), User.authUser)
 // 老用户绑定微信
 app.get('/api/:appId/bindPlatform', isAuthedMiddleware(req => req.params.appId), User.bindPlatform)
 // 微信登录
 app.get('/api/:appId/platformLogin', isAuthedMiddleware(req => req.params.appId), User.platformLogin)
+// 检测微信登录
+app.get('/api/:appId/platformInfo', isAuthedMiddleware(req => req.params.appId), User.platformInfo)
 /*
  * @门户相关
  */
@@ -67,11 +73,11 @@ app.use((err, req, res, next) => {
     res.status(400).json(err)
 })
 // 项目启动
-if(process.env.NODE_ENV === 'production'){
-    app.listen(3000)
-} else {
+if(!process.env.NODE_ENV){
     https.createServer({
         key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
         cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
     }, app).listen(443)
+} else {
+    app.listen(3000)
 }
