@@ -105,7 +105,6 @@ const authUser = (query) => {
             const sessionKey = sessionData.session_key
             const openId = sessionData.openid
             const appId = sessionData.appid
-            console.log(sessionData)
             let pc,tmpData
             try {
                 pc = new WXBizDataCrypt(appId, sessionKey)
@@ -152,7 +151,6 @@ const authUser = (query) => {
 const bindPlatform_static = (appId, options) => {
     return new Promise((reslove, reject) => {
         cmsAPI.appBBS(appId).then((data) => {
-            console.log(`${data.forumUrl}/mobcent/app/web/index.php?r=user/saveplatforminfo&${raw(options)}`)
             request({
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=user/saveplatforminfo&${raw(options)}`,
                 json: true
@@ -224,7 +222,6 @@ exports.bindPlatform = (req, res, next) => {
  */
 const platformLogin_static = (appId, options) => {
     return new Promise((reslove, reject) => {
-        //console.log("platformLogin", `${data.forumUrl}/mobcent/app/web/index.php?r=user/wxlogin&${raw(options)}`)
         cmsAPI.appBBS(appId).then((data) => {
             request({
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=user/wxlogin&${raw(options)}`,
@@ -233,6 +230,7 @@ const platformLogin_static = (appId, options) => {
                 if (err) reject(err)
                 if (!body.rs) reject({msg: body})
                 reslove(body)
+
             })
         })
     })
@@ -291,8 +289,12 @@ exports.platformLogin = (req, res, next) => {
         return next({errcode:102, msg:'获取appid失败！'})
     })
     .then((result) => {
-        if(!result) return
         return res.json(Object.assign({}, result, { rs: 1 }))
+    }, err => {
+        next(err)
+    })
+    .catch(err => {
+        next(err)
     })
 }
 /*
