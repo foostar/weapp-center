@@ -18,6 +18,7 @@ const formatList = (body) => {
         list: body.list && body.list.map(x => ({
             id: x.topic_id,
             forumId: x.board_id,
+            type:'post',
             forumName: x.board_name,
             title: x.title,
             user: {
