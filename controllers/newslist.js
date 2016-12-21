@@ -40,6 +40,8 @@ exports.newsList = (req, res, next) => {
             if (err) return next(err)
             res.json(formatNewsList(body))
         })
+    }, err => {
+        return next(err)
     })
 }
 /*
@@ -88,7 +90,6 @@ exports.newsDetail = (req, res, next) => {
             json: true
         }, (err, response, body) => {
             if (err) return next(err)
-            console.log(body)
             result = body.body.newsInfo
             result.content && result.content.forEach((v) => {
                 if (v.type == 'image') {
@@ -109,5 +110,7 @@ exports.newsDetail = (req, res, next) => {
             })
             
         })
+    }, err => {
+        return next(err)
     })
 }

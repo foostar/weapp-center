@@ -35,6 +35,8 @@ exports.searchPost = (req, res, next) => {
             if (!body.rs) return next(body);
             res.json(formatList(body))
         })
+    }, err => {
+        return next(err)
     })
 }
 /*
@@ -70,6 +72,8 @@ exports.searchArticle = (req, res, next) => {
             if (!body.total_num) return next({rs:0, errcode: '对不起，没有找到匹配结果'});
             res.json(formatArticleList(body))
         })
+    }, err => {
+        return next(err)
     })    
 }
 /*
@@ -105,5 +109,7 @@ exports.searchUser = (req, res, next) => {
             if (!body.total_num) return next({rs:0, errcode: '对不起，没有找到匹配结果'});
             res.json(body)
         })
+    }, err => {
+        return next(err)
     })
 }

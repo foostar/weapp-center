@@ -95,8 +95,6 @@ const authUser = (query) => {
         if(!signature || !token || !rawData || !iv || !encryptedData) {
             return reject({msg:'缺少必要的参数', errcode:105})
         }
-        encryptedData = encryptedData.replace(/\s/g,"+")
-        iv = iv.replace(/\s/g,"+")
         client.get(token, function(err,result){
             if (err || !result) {  
                 return reject({errcode:102, msg:'token过期'})
@@ -159,16 +157,18 @@ const bindPlatform_static = (appId, options) => {
                 if (!body.rs) reject({msg: body})
                 reslove(body)
             })
+        }, err => {
+            reject(err)
         })
     })
 }
 exports.bindPlatform = (req, res, next) => {
-    const { username, password, token, mobile, code } = req.query
+    const { username, password, token, mobile, code } = req.body
     if(!username || !password || !token) {
         return next({msg:'缺少必要的参数', errcode:105})
     }
     const xyAppId = req.params.appId
-    authUser(req.query)
+    authUser(req.body)
     .then((data) => {
         return new Promise((reslove, reject) => {
             client.get(token, function(err,result){  
@@ -232,15 +232,17 @@ const platformLogin_static = (appId, options) => {
                 reslove(body)
 
             })
+        }, err => {
+            reject(err)
         })
     })
 }
 exports.platformLogin = (req, res, next) => {
     // 根据appId拿到froumkey
     const xyAppId = req.params.appId
-    const { token } = req.query
+    const { token } = req.body
     if(!token) return next({msg:'缺少必要的参数', errcode:105})
-    authUser(req.query)
+    authUser(req.body)
     .then((data) => {
         return new Promise((reslove, reject) => {
             client.get(token, function(err,result){
@@ -311,14 +313,16 @@ const platformInfo_static = (appId, options) => {
                 if (!body.rs) reject({msg: body})
                 reslove(body)
             })
+        }, err => {
+            reject(err)
         })
     })
 }
 exports.platformInfo = (req, res, next) => {
     const xyAppId = req.params.appId
-    const { token } = req.query
+    const { token } = req.body
     if(!token) return next({msg:'缺少必要的参数', errcode:105})
-    authUser(req.query)
+    authUser(req.body)
     .then((data) => {
         return new Promise((reslove, reject) => {
             client.get(token, function(err,result){

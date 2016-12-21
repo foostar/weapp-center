@@ -10,10 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "http-proxy": "^1.15.1",
     "node-fetch": "^1.6.3",
     "promise": "^7.1.1",
+    "promise-retry": "^1.1.1",
     "redis": "^2.6.3",
     "request": "^2.78.0",
     "xiaoyun-cmsapi": "0.1.7"
