@@ -34,8 +34,11 @@ const createSession = (value) => {
     })
 }
 exports.onLogin = (req, res, next) => {
-    const code = req.query.code;
-    const xyAppId = req.params.appId;    
+    if(process.env.NODE_ENV == 'admin') {
+        return res.json({ rs: 1, token: 'XIAOYUNadmin' })
+    }
+    const code = req.query.code
+    const xyAppId = req.params.appId
     cmsAPI.wxAppId(xyAppId)
     .then((data) => {
         if(!data.wppAppId || !data.wppSecret) {
@@ -91,6 +94,9 @@ exports.checkLogin = (req, res, next) => {
  */
 const authUser = (query) => {
     return new Promise((reslove, reject) => {
+        if(process.env.NODE_ENV == 'admin') {
+            return reject({ errcode:107, msg:'不能微信登录' })
+        }
         let { signature, token, rawData, iv, encryptedData } = query
         if(!signature || !token || !rawData || !iv || !encryptedData) {
             return reject({msg:'缺少必要的参数', errcode:105})
@@ -113,6 +119,7 @@ const authUser = (query) => {
                 return reject({errcode:103, msg:'用户信息不正确'})
             }
             const sign = crypto.createHash('sha1').update(`${rawData}${sessionKey}`).digest('hex').toString()
+            console.log("tmpdata", tmpData)
             if (signature != sign) {
                 console.log("签名不一致")
                 return reject({errcode:103, msg:'用户信息不正确'})

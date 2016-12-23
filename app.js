@@ -12,7 +12,6 @@ const bodyParser = require("body-parser")
 const { raw, isAuthed, isAuthedMiddleware, cmsAPI } = require("./middleware/middleware.js")
 
 const app = express()
-
 app.all("*", (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*")
     res.header("Access-Control-Allow-Headers", "X-Requested-With")
@@ -88,7 +87,7 @@ app.use((err, req, res, next) => {
     res.status(400).json(err)
 })
 // 项目启动
-if(!process.env.NODE_ENV){
+if(process.env.NODE_ENV=='admin' || !process.env.NODE_ENV){
     https.createServer({
         key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
         cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
