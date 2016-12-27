@@ -200,7 +200,6 @@ exports.topiclist = (req, res, next) => {
         return getTopicList(data, options)
     })
     .then((listUrl) => {
-        console.log(listUrl)
         request({
             url: listUrl,
             json: true 

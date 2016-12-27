@@ -87,7 +87,7 @@ app.use((err, req, res, next) => {
     res.status(400).json(err)
 })
 // 项目启动
-if(process.env.NODE_ENV=='admin' || !process.env.NODE_ENV){
+if(!process.env.NODE_ENV){
     https.createServer({
         key: fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
         cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
