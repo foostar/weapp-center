@@ -45,12 +45,10 @@ const formatList = (body) => {
                 essense: x.essense || 0
             }
         })) || [],
-        topTopicList: body.topTopicList || [],
-        typeInfo: body.typeInfo
+        panel: body.newTopicPanel || [],
     }
     const forumInfo = body.forumInfo
     if (forumInfo) {
-        console.log(111)
         data.forum = {
             id: forumInfo.id,
             name: forumInfo.title,
@@ -62,6 +60,19 @@ const formatList = (body) => {
             isFocus: forumInfo.is_focus
         }
     }
+    if (body.topTopicList) {
+        data.topTopicList = body.topTopicList
+    }
+    if (body.anno_list) {
+        data.anno_list = body.anno_list
+    }
+    if (body.sortInfo) {
+        data.sort = body.sortInfo
+    }
+    if (body.typeInfo) {
+        data.typeInfo = body.typeInfo
+    }
+
     return data
 }
 /* 格式化门户列表 */

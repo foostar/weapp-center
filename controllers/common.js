@@ -113,3 +113,13 @@ exports.searchUser = (req, res, next) => {
         return next(err)
     })
 }
+/*
+ * @发表
+ */
+exports.createTopic = (req, res, next) => {
+    const {
+        appId
+    } = req.params
+
+    console.log("req", req.body)
+}
