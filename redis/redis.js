@@ -31,7 +31,7 @@ const getItem = (key) => {
 const removeItem = (key) => {
     return new Promise((reslove, reject) => {
         client.del(key, (err, result) => {
-            if (err) {
+            if (err || !result) {
                 return reject({ status: 400, msg: "操作失败，请重试！" })
             }
             reslove()

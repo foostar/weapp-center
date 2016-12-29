@@ -72,8 +72,10 @@ exports.postlist = (req, res, next) => {
         boardId: forumId
     })
 
-    const storgeKey = req.path + JSON.stringify(options)
-
+    const storgeKey = req.path + options.orderby
+    if(options.sortid) {
+        storgeKey = storgeKey + options.sortid
+    }
     getListData(storgeKey, options.page)
     .then((data) => {
         return res.json(formatList(JSON.parse(data.data)))

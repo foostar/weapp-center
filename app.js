@@ -48,7 +48,7 @@ app.get('/api/:appId/portal/search', isAuthedMiddleware(req => req.params.appId)
 // 搜索用户
 app.get('/api/:appId/user/searchuser', isAuthedMiddleware(req => req.params.appId), Common.searchUser)
 // 发表
-app.post('/api/:appId/createTopic', isAuthedMiddleware(req => req.params.appId), Common.createTopic)
+app.post('/api/:appId/createTopic', isAuthedMiddleware(req => req.params.appId), bodyParser.json(), Common.createTopic)
 
 /*
  * @用户相关
@@ -83,8 +83,6 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
 app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), Postlist.postDetail)
 // 关注列表
 app.get('/api/:appId/followlist', isAuthedMiddleware(req => req.params.appId), Postlist.followList)
-// 分类信息列表
-app.get('/api/:appId/forum/topiclist', isAuthedMiddleware(req => req.params.appId), Postlist.topiclist)
 
 
 app.use((err, req, res, next) => {
