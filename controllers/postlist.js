@@ -1,10 +1,24 @@
 const request = require('request')
 const url = require('url')
 const { raw, cmsAPI } = require("../middleware/middleware.js")
+const { setItem, getItem, setExpire } = require("../redis/redis.js")
+const { sendError } = require('../utils/util.js')
 const { formatParams, formatList, formatNewsList, formatArticle, formatPost, formatArticleList } = require('../utils/util.js')
 /*
  * @帖子列表
  */
+const getListData = (storgeKey, page) => {
+    return new Promise((reslove, reject) => {
+        if (page != 1) reslove()
+        getItem(storgeKey)
+        .then((result) => {
+            reslove({ cache: true, data: result })
+        })
+        .catch(err => {
+            reject(err)
+        })
+    })
+}
 exports.postlist = (req, res, next) => {
     const {
         orderby,
@@ -16,7 +30,9 @@ exports.postlist = (req, res, next) => {
         appId,
         forumId
     } = req.params
+
     let options = req.query.options
+
     try {
         options = Object.assign({
             circle: 1,
@@ -31,18 +47,30 @@ exports.postlist = (req, res, next) => {
         options = {}
     }
 
-    cmsAPI.appBBS(appId).then((data) => {
-        request({
-            url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/topiclistex&${raw(options)}`,
-            json: true
-        }, (err, response, body) => {
-            if (err) return next(err)
+    const storgeKey = req.path + JSON.stringify(options)
 
-            res.json(formatList(body))
-        })
-    }, err => {
-        return next(err)
+    getListData(storgeKey, page)
+    .then((data) => {
+        return res.json(formatList(JSON.parse(data.data)))
     })
+    .catch(err => {
+        if(err.errcode && err.errcode == 106) {
+            return cmsAPI.appBBS(appId).then((data) => {
+                request({
+                    url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/topiclistex&${raw(options)}`,
+                    json: true
+                }, (err, response, body) => {
+                    if (err) return next(sendError(err))
+                    setItem(storgeKey, JSON.stringify(body))
+                    return res.json(formatList(body))
+                })
+            }, err => {
+                return next(sendError(err))
+            })  
+        }
+        next(sendError(err))
+    })
+    
 }
 /*
  * @帖子、门户详情
@@ -116,17 +144,31 @@ exports.followList = (req, res, next) => {
     } catch (err) {
         return next(err)
     }
-    cmsAPI.appBBS(appId).then((data) => {
-        request({
-            url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/followlist&${raw(options)}`,
-            json: true
-        }, (err, response, body) => {
-            if (err) return next(err)
-            res.json(formatList(body))
-        })
-    }, err => {
-        return next(err)
+
+    const storgeKey = req.path + JSON.stringify(options)
+
+    getListData(storgeKey, page)
+    .then((data) => {
+        return res.json(formatList(JSON.parse(data.data)))
     })
+    .catch(err => {
+        if(err.errcode && err.errcode == 106) {
+            cmsAPI.appBBS(appId).then((data) => {
+                request({
+                    url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/followlist&${raw(options)}`,
+                    json: true
+                }, (err, response, body) => {
+                    if (err) return next(sendError(err))
+                    setItem(storgeKey, JSON.stringify(body))
+                    res.json(formatList(body))
+                })
+            }, err => {
+                return next(sendError(err))
+            })
+        }
+        next(sendError(err))
+    })
+    
 }
 /*
  * @分类信息列表
@@ -196,19 +238,31 @@ exports.topiclist = (req, res, next) => {
     } catch (err) {
         return next(err)
     }
-    cmsAPI.appBBS(appId).then((data) => {
-        return getTopicList(data, options)
-    })
-    .then((listUrl) => {
-        request({
-            url: listUrl,
-            json: true 
-        }, (err, response, body) => {
-            if (err) return next(err)
-            res.json(body)
-        })
+
+    const storgeKey = req.path + JSON.stringify(options)
+
+    getListData(storgeKey, page)
+    .then((data) => {
+        return res.json(formatList(JSON.parse(data.data)))
     })
     .catch(err => {
-        return next(err)
+        if(err.errcode && err.errcode == 106) {
+            return cmsAPI.appBBS(appId).then((data) => {
+                return getTopicList(data, options)
+            })
+            .then((listUrl) => {
+                request({
+                    url: listUrl,
+                    json: true
+                }, (err, response, body) => {
+                    if (err) return next(sendError(err))
+                    setItem(storgeKey, JSON.stringify(body))
+                    return res.json(body)
+                })
+            }, err => {
+                return next(sendError(err))
+            })
+        }
+        next(sendError(err))
     })
 }

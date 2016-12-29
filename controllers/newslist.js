@@ -1,5 +1,7 @@
 const request = require('request')
 const url = require('url')
+const { setItem, getItem, setExpire } = require("../redis/redis.js")
+const { sendError } = require('../utils/util.js')
 const { raw, cmsAPI } = require("../middleware/middleware.js")
 const { formatParams, formatList, formatNewsList, formatArticle, formatPost, formatArticleList } = require('../utils/util.js')
 /*
@@ -32,16 +34,27 @@ exports.newsList = (req, res, next) => {
         options = {}
     }
 
-    cmsAPI.appBBS(appId).then((data) => {
-        request({
-            url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/newslist&${raw(options)}`,
-            json: true
-        }, (err, response, body) => {
-            if (err) return next(err)
-            res.json(formatNewsList(body))
-        })
-    }, err => {
-        return next(err)
+    const storgeKey = req.path + JSON.stringify(options)
+
+    getListData(storgeKey, page)
+    .then((data) => {
+        return res.json(formatList(JSON.parse(data.data)))
+    })
+    .catch(err => {
+        if(err.errcode && err.errcode == 106) {
+            return cmsAPI.appBBS(appId).then((data) => {
+                request({
+                    url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/newslist&${raw(options)}`,
+                    json: true
+                }, (err, response, body) => {
+                    if (err) return next(sendError(err))
+                    setItem(storgeKey, JSON.stringify(body))
+                    res.json(formatList(body))
+                })
+            }, err => {
+                return next(sendError(err))
+            })  
+        }
     })
 }
 /*

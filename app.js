@@ -25,6 +25,7 @@ var proxy = httpProxy.createProxyServer()
  */
 app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res, next) => {
     const uri = req.params.uri
+    console.log("uri", uri)
     promiseRetry((retry, number) => {
         return proxy.web(req, res, {
             changeOrigin: true,
@@ -62,6 +63,8 @@ app.post('/api/:appId/bindPlatform', isAuthedMiddleware(req => req.params.appId)
 app.post('/api/:appId/platformLogin', isAuthedMiddleware(req => req.params.appId), bodyParser.json(), User.platformLogin)
 // 检测微信登录
 app.post('/api/:appId/platformInfo', isAuthedMiddleware(req => req.params.appId), bodyParser.json(), User.platformInfo)
+// 微信快速登录
+app.post('/api/:appId/wxLogin', isAuthedMiddleware(req => req.params.appId), bodyParser.json(), User.wxLogin)
 /*
  * @门户相关
  */

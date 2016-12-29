@@ -45,10 +45,12 @@ const formatList = (body) => {
                 essense: x.essense || 0
             }
         })) || [],
+        topTopicList: body.topTopicList || [],
+        typeInfo: body.typeInfo
     }
-    data.topTopicList = body.topTopicList
     const forumInfo = body.forumInfo
     if (forumInfo) {
+        console.log(111)
         data.forum = {
             id: forumInfo.id,
             name: forumInfo.title,
@@ -204,11 +206,22 @@ const formatArticleList = (body) => {
     }
     return data
 }
+/* 发送错误信息 */
+const sendError = (err) => {
+    if (err.errcode) {
+        return err
+    }
+    if (Object.prototype.toString.call(this) == "[object Object]") {
+        return { errcode: 106, msg: "操作失败，请重试" }
+    }
+    return { errcode: 106, msg: err }
+}
 module.exports = {
     formatParams,
     formatList,
     formatNewsList,
     formatArticle,
     formatPost,
-    formatArticleList
+    formatArticleList,
+    sendError
 }
