@@ -72,6 +72,15 @@ const formatList = (body) => {
     if (body.typeInfo) {
         data.typeInfo = body.typeInfo
     }
+    if (body.tpcinfo) {
+        data.tpcinfo = body.tpcinfo
+    }
+    if (body.topUser) {
+        data.topUser = body.topUser
+    }
+    if (body.partinNum) {
+        data.partinNum = body.partinNum
+    }
 
     return data
 }

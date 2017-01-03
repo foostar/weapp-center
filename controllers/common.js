@@ -126,7 +126,14 @@ exports.createTopic = (req, res, next) => {
     const { act, json } = req.body
     const body = JSON.parse(decodeURIComponent(decodeURIComponent(json))).body.json
     if (body.act != 'reply') {
-        const storgeKeys = [`/api/${appId}/forum/${body.fid}/postsall`, `/api/${appId}/forum/${body.fid}/postsnew`, `/api/${appId}/forum/0/postsall`, `/api/${appId}/forum/0/postsnew`]
+        const storgeKeys = [
+            `/api/${appId}/forum/${body.fid}/postsall`, 
+            `/api/${appId}/forum/${body.fid}/postsnew`, 
+            `/api/${appId}/forum/0/postsall`, 
+            `/api/${appId}/forum/0/postsnew`, 
+            `/api/${appId}/topicdtl${body.ti_id}NEW`,
+            `/api/${appId}/topicdtl${body.ti_id}HOT`
+        ]
         if(body.sortId) {
             storgeKeys.forEach(v => {
                 v = v + body.sortId

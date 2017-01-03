@@ -53,6 +53,18 @@ const getListData = (storgeKey, page) => {
         })
     })
 }
+const getQuery = (query) => {
+    let options = {}
+
+    Object.keys(query).forEach(v => {
+        if (v == 'options') {
+            options = Object.assign(options, JSON.parse(query[v]))
+        } else {
+            options[v] = query[v]
+        }
+    })
+    return options
+}
 exports.postlist = (req, res, next) => {
     let options = {}
 
@@ -183,9 +195,40 @@ exports.followList = (req, res, next) => {
     })
     .catch(err => {
         if(err.errcode && err.errcode == 106) {
-            cmsAPI.appBBS(appId).then((data) => {
+            return cmsAPI.appBBS(appId).then((data) => {
                 request({
                     url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/followlist&${raw(options)}`,
+                    json: true
+                }, (err, response, body) => {
+                    if (err) return next(sendError(err))
+                    setItem(storgeKey, JSON.stringify(body))
+                    res.json(formatList(body))
+                })
+            }, err => {
+                return next(sendError(err))
+            })
+        }
+        next(sendError(err))
+    })
+}
+/*
+ * @话题帖子列表
+ */
+exports.topiclist = (req, res, next) => {
+    const options = getQuery(req.query)
+    const {
+        appId
+    } = req.params
+    const storgeKey = req.path + options.ti_id + options.orderby
+    getListData(storgeKey, options.page)
+    .then((data) => {
+        return res.json(formatList(JSON.parse(data.data)))
+    })
+    .catch(err => {
+        if(err.errcode && err.errcode == 106) {
+            return cmsAPI.appBBS(appId).then((data) => {
+                request({
+                    url: `${data.forumUrl}/mobcent/app/web/index.php?r=topic/topicdtl&${raw(options)}`,
                     json: true
                 }, (err, response, body) => {
                     if (err) return next(sendError(err))

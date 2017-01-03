@@ -14,8 +14,8 @@ const { raw, isAuthed, isAuthedMiddleware, cmsAPI } = require("./middleware/midd
 const app = express()
 app.all("*", (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*")
-    res.header("Access-Control-Allow-Headers", "X-Requested-With")
-    res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS")
+    // res.header("Access-Control-Allow-Headers", "X-Requested-With")
+    // res.header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS")
     next()
 })
 
@@ -32,7 +32,6 @@ app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res, n
             ignorePath: true
         })
         .catch(function (err) {
-            console.log(111)
             if (err.code == 'ECONNRESET') {
                 retry(err);
             }
@@ -83,7 +82,8 @@ app.get('/api/:appId/forum/:forumId/posts', isAuthedMiddleware(req => req.params
 app.get('/api/:appId/post/:id', isAuthedMiddleware(req => req.params.appId), Postlist.postDetail)
 // 关注列表
 app.get('/api/:appId/followlist', isAuthedMiddleware(req => req.params.appId), Postlist.followList)
-
+// 话题帖子列表
+app.get('/api/:appId/topicdtl', isAuthedMiddleware(req => req.params.appId), Postlist.topiclist )
 
 app.use((err, req, res, next) => {
     console.log("err", err, req.path)
