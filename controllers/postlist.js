@@ -43,7 +43,7 @@ const getTopicList = (data, options) => {
 }
 const getListData = (storgeKey, page) => {
     return new Promise((reslove, reject) => {
-        if (page != 1) reslove()
+        if (page != 1) reject({ errcode: 106, msg: "缓存失效!" })
         getItem(storgeKey)
         .then((result) => {
             reslove({ cache: true, data: result })

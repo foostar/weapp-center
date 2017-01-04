@@ -25,6 +25,9 @@ var proxy = httpProxy.createProxyServer()
  */
 app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res, next) => {
     const uri = req.params.uri
+    if(uri.match(/sendattachmentex/)) {
+        console.log(req)
+    }
     promiseRetry((retry, number) => {
         return proxy.web(req, res, {
             changeOrigin: true,
@@ -48,6 +51,7 @@ app.get('/api/:appId/portal/search', isAuthedMiddleware(req => req.params.appId)
 app.get('/api/:appId/user/searchuser', isAuthedMiddleware(req => req.params.appId), Common.searchUser)
 // 发表
 app.post('/api/:appId/createTopic', isAuthedMiddleware(req => req.params.appId), bodyParser.json(), Common.createTopic)
+// 上传图片
 
 /*
  * @用户相关

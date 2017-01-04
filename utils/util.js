@@ -175,6 +175,7 @@ const formatPost = (page, body) => {
             page: body.page,
             forumName: body.forumName,
             content: result.content,
+            sort: result.sortContent,
             colleted: parseInt(result.is_favor),
             like: 0,
             boardId:body.boardId,
