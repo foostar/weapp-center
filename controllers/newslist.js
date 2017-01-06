@@ -3,7 +3,7 @@ const url = require('url')
 const { setItem, getItem, setExpire } = require("../redis/redis.js")
 const { sendError } = require('../utils/util.js')
 const { raw, cmsAPI } = require("../middleware/middleware.js")
-const { formatParams, formatList, formatNewsList, formatArticle, formatPost, formatArticleList } = require('../utils/util.js')
+const { formatList, formatArticle, getListData, errorType } = require('../utils/util.js')
 /*
  * @门户、文章列表
  */
@@ -41,20 +41,23 @@ exports.newsList = (req, res, next) => {
         return res.json(formatList(JSON.parse(data.data)))
     })
     .catch(err => {
-        if(err.errcode && err.errcode == 106) {
-            return cmsAPI.appBBS(appId).then((data) => {
+        if(err.errcode && err.errcode == 401) {
+            return cmsAPI.appBBS(appId)
+            .then((data) => {
                 request({
                     url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/newslist&${raw(options)}`,
                     json: true
                 }, (err, response, body) => {
-                    if (err) return next(sendError(err))
+                    if (err) return next(errorType.mobcentError(err))
+                    if (!body.rs) return next(errorType.mobcentError(body))
                     setItem(storgeKey, JSON.stringify(body))
                     res.json(formatList(body))
                 })
             }, err => {
-                return next(sendError(err))
+                return next(errorType.cmsError(err))
             })  
         }
+        next(sendError(err))
     })
 }
 /*
@@ -97,12 +100,14 @@ exports.newsDetail = (req, res, next) => {
     }
     
     let result
-    cmsAPI.appBBS(appId).then((data) => {
+    cmsAPI.appBBS(appId)
+    .then((data) => {
         request({
             url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/newsview&${raw(options)}`,
             json: true
         }, (err, response, body) => {
-            if (err) return next(err)
+            if (err) return next(errorType.mobcentError(err))
+            if (!body.rs) return next(errorType.mobcentError(body))
             result = body.body.newsInfo
             result.content && result.content.forEach((v) => {
                 if (v.type == 'image') {
@@ -118,12 +123,13 @@ exports.newsDetail = (req, res, next) => {
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=portal/commentlist&${raw(params)}`,
                 json: true
             }, (err, response, body) => {
-                if (err) return next(err)
+                if (err) return  next(errorType.mobcentError(err))
+                if (!body.rs) return  next(errorType.mobcentError(body))
                 res.json(formatArticle(result, body))
             })
             
         })
     }, err => {
-        return next(err)
+        return next(errorType.cmsError(err))
     })
 }

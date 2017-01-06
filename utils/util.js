@@ -1,4 +1,6 @@
 /* 格式化参数 */
+const { getItem } = require("../redis/redis")
+
 const formatParams = (params) => {
     params = Object.assign({}, params, {
         accessToken: params.token,
@@ -31,7 +33,7 @@ const formatList = (body) => {
             views: x.hits,
             from: x.from || '',
             replies: x.replies,
-            subject: x.subject,
+            subject: x.subject || x.summary,
             gender: x.gender,
             reply: x.reply || [],
             recommendAdd: x.recommendAdd || 0,
@@ -227,15 +229,45 @@ const formatArticleList = (body) => {
     }
     return data
 }
-/* 发送错误信息 */
+
+// 发送错误信息 
 const sendError = (err) => {
-    if (err.errcode) {
+    if (err.errcode || Object.prototype.toString.call(this) == "[object Object]") {
         return err
     }
-    if (Object.prototype.toString.call(this) == "[object Object]") {
-        return { errcode: 106, msg: "操作失败，请重试" }
-    }
     return { errcode: 106, msg: err }
+}
+
+// 错误信息提示
+const errorType = {
+    101: { status: 400, errcode: 101, msg: "请检查用户是否合法，或者appId、secret配置错误！" },
+    102: { status: 400, errcode: 102, msg: "token过期！" },
+    103: { status: 400, errcode: 103, msg: "用户信息不正确！" },
+    106: { status: 400, errcode: 106, msg: "操作失败，请重试！" },
+    400: { status: 400, errcode: 400, msg: "缺少必要参数或传入参数不合法！" },
+    401: { status: 400, errcode: 401, msg: "缓存失效，请重试！" },
+    403: { status: 400, errcode: 403, msg: "不能微信登录!" },
+    405: { status: 400, errcode: 405, msg: "对不起，没有找到匹配结果!" },
+    406: { status: 400, errcode: 406, msg: "发表失败，请重试!" },
+    cmsError: (err) => {
+        return { status: 400, errcode: 500, err, msg: "cms服务错误!" }
+    },
+    mobcentError: (err) => {
+        return { status: 400, errcode: 500, err, msg: "mobcent服务错误!" }
+    }
+}
+
+const getListData = (storgeKey, page) => {
+    return new Promise((reslove, reject) => {
+        if (page != 1) reject(errorType[401])
+        getItem(storgeKey)
+        .then((result) => {
+            reslove({ cache: true, data: result })
+        })
+        .catch(err => {
+            reject(err)
+        })
+    })
 }
 module.exports = {
     formatParams,
@@ -244,5 +276,7 @@ module.exports = {
     formatArticle,
     formatPost,
     formatArticleList,
-    sendError
+    sendError,
+    errorType,
+    getListData
 }

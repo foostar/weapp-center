@@ -3,7 +3,7 @@ const url = require('url')
 const { raw, cmsAPI } = require("../middleware/middleware.js")
 const { setItem, getItem, setExpire } = require("../redis/redis.js")
 const { sendError } = require('../utils/util.js')
-const { formatParams, formatList, formatNewsList, formatArticle, formatPost, formatArticleList } = require('../utils/util.js')
+const { formatParams, formatList, formatPost, getListData, errorType } = require('../utils/util.js')
 /*
  * @帖子列表
  */
@@ -32,7 +32,7 @@ const getTopicList = (data, options) => {
             url: `${data.forumUrl}/mobcent/app/web/index.php?r=test/plugininfo`,
             json: true
         }, (err, response, body) => {
-            if (err) return reject(err)
+            if (err) return reject(errorType.mobcentError(err))
             if(versionCompare(body.mobcent_version, '2.6.1.7')){
                 listUrl = `${data.forumUrl}/mobcent/app/web/index.php?r=forum/topiclist&${raw(options)}`
             }
@@ -41,18 +41,7 @@ const getTopicList = (data, options) => {
     })
     
 }
-const getListData = (storgeKey, page) => {
-    return new Promise((reslove, reject) => {
-        if (page != 1) reject({ errcode: 106, msg: "缓存失效!" })
-        getItem(storgeKey)
-        .then((result) => {
-            reslove({ cache: true, data: result })
-        })
-        .catch(err => {
-            reject(err)
-        })
-    })
-}
+
 const getQuery = (query) => {
     let options = {}
 
@@ -93,16 +82,20 @@ exports.postlist = (req, res, next) => {
         return res.json(formatList(JSON.parse(data.data)))
     })
     .catch(err => {
-        if(err.errcode && err.errcode == 106) {
-            return cmsAPI.appBBS(appId).then((data) => {
+        if(err.errcode && err.errcode == 401) {
+            return cmsAPI.appBBS(appId)
+            .then((data) => {
                 return getTopicList(data, options)
+            }, err => {
+                return next(errorType.cmsError(err))
             })
             .then((listUrl) => {
                 request({
                     url: listUrl,
                     json: true
                 }, (err, response, body) => {
-                    if (err) return next(sendError(err))
+                    if (err) return next(errorType.mobcentError(err))
+                    if (!body.rs) return next(errorType.mobcentError(body))
                     setItem(storgeKey, JSON.stringify(body))
                     return res.json(formatList(body))
                 })
@@ -137,7 +130,6 @@ exports.postDetail = (req, res, next) => {
     catch (e) {
         options = {}
     }
-    options = formatParams(options)
     try {
         options = Object.assign({
             boardId,
@@ -155,11 +147,12 @@ exports.postDetail = (req, res, next) => {
             url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/postlist&${raw(options)}`,
             json: true
         }, (err, response, body) => {
-            if (err) return next(err)
+            if (err) return next(errorType.mobcentError(err))
+            if (!body.rs) return next(errorType.mobcentError(body))
             res.json(formatPost(page, body))
         })
     }, err => {
-        return next(err)
+        return next(errorType.cmsError(err))
     })
 }
 /*
@@ -194,18 +187,20 @@ exports.followList = (req, res, next) => {
         return res.json(formatList(JSON.parse(data.data)))
     })
     .catch(err => {
-        if(err.errcode && err.errcode == 106) {
-            return cmsAPI.appBBS(appId).then((data) => {
+        if(err.errcode && err.errcode == 401) {
+            return cmsAPI.appBBS(appId)
+            .then((data) => {
                 request({
                     url: `${data.forumUrl}/mobcent/app/web/index.php?r=forum/followlist&${raw(options)}`,
                     json: true
                 }, (err, response, body) => {
-                    if (err) return next(sendError(err))
+                    if (err) return next(errorType.mobcentError(err))
+                    if (!body.rs) return next(errorType.mobcentError(body))
                     setItem(storgeKey, JSON.stringify(body))
                     res.json(formatList(body))
                 })
             }, err => {
-                return next(sendError(err))
+                return next(errorType.cmsError(err))
             })
         }
         next(sendError(err))
@@ -215,7 +210,8 @@ exports.followList = (req, res, next) => {
  * @话题帖子列表
  */
 exports.topiclist = (req, res, next) => {
-    const options = getQuery(req.query)
+    const query = req.query
+    const options = getQuery(query)
     const {
         appId
     } = req.params
@@ -225,18 +221,20 @@ exports.topiclist = (req, res, next) => {
         return res.json(formatList(JSON.parse(data.data)))
     })
     .catch(err => {
-        if(err.errcode && err.errcode == 106) {
-            return cmsAPI.appBBS(appId).then((data) => {
+        if(err.errcode && err.errcode == 401) {
+            return cmsAPI.appBBS(appId)
+            .then((data) => {
                 request({
                     url: `${data.forumUrl}/mobcent/app/web/index.php?r=topic/topicdtl&${raw(options)}`,
                     json: true
                 }, (err, response, body) => {
-                    if (err) return next(sendError(err))
+                    if (err) return next(errorType.mobcentError(err))
+                    if (!body.rs) return next(errorType.mobcentError(body))
                     setItem(storgeKey, JSON.stringify(body))
                     res.json(formatList(body))
                 })
             }, err => {
-                return next(sendError(err))
+                return next(errorType.cmsError(err))
             })
         }
         next(sendError(err))

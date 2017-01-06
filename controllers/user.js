@@ -2,7 +2,7 @@ const crypto = require('crypto')
 const request = require('request')
 const WXBizDataCrypt = require('../utils/WXBizDataCrypt.js')
 const { raw, cmsAPI } = require('../middleware/middleware.js')
-const { sendError } = require('../utils/util.js')
+const { sendError, errorType } = require('../utils/util.js')
 const { getItem, setItem, setExpire } = require('../redis/redis.js')
 const Promise = require('promise')
 /*
@@ -15,8 +15,8 @@ const getSessionKey = (options) => {
             json: true
         }, (err, response, body) => {
             if (err) reject(err)
-            if (body.errcode) return reject({ "errcode": 101, "errmsg": "请检查用户是否合法，或者appId、secret配置错误！" })
-            if (!body.expires_in) return reject({ "errcode": 102, "errmsg": "session 过期" })
+            if (body.errcode) return reject(errorType[101])
+            if (!body.expires_in) return reject(errorType[102])
             reslove(Object.assign(body, {
                 appid:options.appid
             })) 
@@ -37,7 +37,7 @@ const getSessionData = (token) => {
         getItem(token)
         .then((result) => {
             if(!result) {
-                return reject({errcode:102, msg:'token过期'})
+                return reject(errorType[102])
             }
             const sessionData = JSON.parse(result)
             reslove(sessionData)
@@ -49,7 +49,7 @@ const getForumKey = (xyAppId, result) => {
         cmsAPI.appInfo(xyAppId).then((data) => {
             reslove({forumKey: data.forumKey, sessionData:result})
         },(err) => {
-            reject(err)
+            reject(errorType.cmsError(err))
         })
     })  
 }
@@ -60,13 +60,12 @@ const platformLogin_static = (appId, options) => {
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=user/wxlogin&${raw(options)}`,
                 json: true
             }, (err, response, body) => {
-                if (err) reject(err)
-                if (!body.rs) reject({msg: body})
+                if (err) reject(errorType.mobcentError(err))
+                if (!body.rs) reject(errorType.mobcentError(body))
                 reslove(body)
-
             })
         }, err => {
-            reject(err)
+            reject(errorType.cmsError(err))
         })
     })
 }
@@ -76,15 +75,14 @@ const platformLogin_static = (appId, options) => {
 const authUser = (query) => {
     return new Promise((reslove, reject) => {
         if(process.env.NODE_ENV == 'admin') {
-            return reject({ errcode:107, msg:'不能微信登录' })
+            return reject(errorType[403])
         }
         let { signature, token, rawData, iv, encryptedData } = query
         if(!signature || !token || !rawData || !iv || !encryptedData) {
-            return reject({msg:'缺少必要的参数', errcode:105})
+            return reject(errorType[400])
         }
         getItem(token)
         .then((result) => {
-            if (!result) return reject({errcode:102, msg:'token过期'})
             const sessionData = JSON.parse(result)
             const sessionKey = sessionData.session_key
             const openId = sessionData.openid
@@ -96,19 +94,19 @@ const authUser = (query) => {
             }
             catch(err){
                 console.log("传输信息不正确")
-                return reject({errcode:103, msg:'用户信息不正确'})
+                return reject(errorType[103])
             }
             const sign = crypto.createHash('sha1').update(`${rawData}${sessionKey}`).digest('hex').toString()
             if (signature != sign) {
                 console.log("签名不一致")
-                return reject({errcode:103, msg:'用户信息不正确'})
+                return reject(errorType[103])
             }
             if (tmpData.watermark.appid != appId) {
                 console.log("appid错误")
-                return reject({errcode:103, msg:'用户信息不正确'})
+                return reject(errorType[103])
             }
             if (!tmpData.unionId) {
-                return reject({errcode:104, msg:'没有unionId!'})
+                return reject(errorType[103])
             }
             return setItem(token, JSON.stringify(Object.assign({}, sessionData, { 
                 unionid: tmpData.unionId,
@@ -136,12 +134,12 @@ const bindPlatform_static = (appId, options) => {
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=user/saveplatforminfo&${raw(options)}`,
                 json: true
             }, (err, response, body) => {
-                if (err) reject(err)
-                if (!body.rs) reject({msg: body})
+                if (err) reject(errorType.mobcentError(err))
+                if (!body.rs) reject(errorType.mobcentError(body))
                 reslove(body)
             })
         }, err => {
-            reject(err)
+            reject(errorType.cmsError(err))
         })
     })
 }
@@ -152,12 +150,12 @@ const platformInfo_static = (appId, options) => {
                 url: `${data.forumUrl}/mobcent/app/web/index.php?r=user/platforminfo&${raw(options)}`,
                 json: true
             }, (err, response, body) => {
-                if (err) reject(err)
-                if (!body.rs) reject({msg: body})
+                if (err) reject(errorType.mobcentError(err))
+                if (!body.rs) reject(errorType.mobcentError(body))
                 reslove(body)
             })
         }, err => {
-            reject(err)
+            reject(errorType.cmsError(err))
         })
     })
 }
@@ -176,7 +174,7 @@ exports.onLogin = (req, res, next) => {
     cmsAPI.wxAppId(xyAppId)
     .then((data) => {
         if(!data.wppAppId || !data.wppSecret) {
-            return next({"errcode": 102, "errmsg": "缺少必要配置项"})
+            return Promise.reject(errorType[400])
         }
         let options = {
             appid: data.wppAppId,
@@ -185,6 +183,8 @@ exports.onLogin = (req, res, next) => {
             grant_type: 'authorization_code'
         }
         return getSessionKey(options)
+    }, err => {
+        return Promise.reject(errorType.cmsError(err))
     })
     .then((body) => {
         // 建立3rd_session
@@ -194,11 +194,8 @@ exports.onLogin = (req, res, next) => {
     })
     .then((data) => {
         const { key, value } = data
-        if(!value || !key) return next({ errcode:10000, errmsg:' 系统出错，请操作' })
+        if(!value || !key) return Promise.reject(errorType[106])
         setItem(key, value)
-        .then(() => {
-            setExpire(key, parseInt(1800))
-        })
         res.json({ rs: 1, token: key })
     })
     .catch((err) => {
@@ -213,7 +210,6 @@ exports.checkLogin = (req, res, next) => {
     const token = req.query.token;
     getItem(token)
     .then(result => {
-        if(!result) return Promise.reject({ errcode: 106, msg: err })
         res.json({ rs:1 })
     })
     .catch(err => {
@@ -226,7 +222,7 @@ exports.checkLogin = (req, res, next) => {
 exports.bindPlatform = (req, res, next) => {
     const { username, password, token, mobile, code } = req.body
     if(!username || !password || !token) {
-        return next({msg:'缺少必要的参数', errcode:105})
+        return next(errorType[400])
     }
     const xyAppId = req.params.appId
     authUser(req.body)
@@ -274,7 +270,7 @@ exports.platformLogin = (req, res, next) => {
     // 根据appId拿到froumkey
     const xyAppId = req.params.appId
     const { token } = req.body
-    if(!token) return next({msg:'缺少必要的参数', errcode:105})
+    if(!token) return next(errorType[400])
     authUser(req.body)
     .then((data) => {
         return getSessionData(token)
@@ -283,7 +279,6 @@ exports.platformLogin = (req, res, next) => {
         return getForumKey(xyAppId, result)
     })
     .then((data) => {
-        if(!data) return
         const { forumKey, sessionData } = data
         const { openid, nickname, sex, province, city, country, headimgurl, unionid } = sessionData
         let options = Object.assign({
@@ -317,7 +312,7 @@ exports.platformLogin = (req, res, next) => {
 exports.platformInfo = (req, res, next) => {
     const xyAppId = req.params.appId
     const { token } = req.body
-    if(!token) return next({msg:'缺少必要的参数', errcode:105})
+    if(!token) return next(errorType[400])
     authUser(req.body)
     .then((data) => {
         return getSessionData(token)
@@ -358,7 +353,7 @@ exports.wxLogin = (req, res, next) => {
     let forumKey = {}
     let sessionData = {}
     let options = {}
-    if(!token) return next({msg:'缺少必要的参数', errcode:105})
+    if(!token) return next(errorType[400])
     authUser(req.body)
     .then(() => {
         return getSessionData(token)
@@ -388,11 +383,10 @@ exports.wxLogin = (req, res, next) => {
         return platformInfo_static(xyAppId, options)
     })
     .then((data) => {
-        if(data.body.register == 1) return Promise.reject({ errcode: 106, msg: "操作失败，请重试！" })
+        if(data.body.register == 1) return Promise.reject(errorType[403])
         res.json(Object.assign({}, data.body, { rs: 1 }))
     })
     .catch(err => {
-        console.log(err)
         next(sendError(err))
     })
 }

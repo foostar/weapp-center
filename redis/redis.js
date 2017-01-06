@@ -2,7 +2,6 @@ const redis = require("redis")
 const config = require("../config/index")
 
 const client = redis.createClient(config.redis_url)
-
 const setItem = (key, value, time) => {
     time = config.cacheTime || 300
     return new Promise((reslove, reject) => {
@@ -21,7 +20,7 @@ const getItem = (key) => {
     return new Promise((reslove, reject) => {
         client.get(key, (err, result) => {
             if (err || !result) {
-                return reject({ errcode: 106, msg: "操作失败，请重试！" })
+                return reject({ status: 400, errcode: 401, msg: "缓存失效，请重试！" })
             }
             reslove(result)
         })
@@ -32,7 +31,7 @@ const removeItem = (key) => {
     return new Promise((reslove, reject) => {
         client.del(key, (err, result) => {
             if (err || !result) {
-                return reject({ status: 400, msg: "操作失败，请重试！" })
+                return reject({ status: 400, errcode: 106, msg: "操作失败，请重试！" })
             }
             reslove()
         })
