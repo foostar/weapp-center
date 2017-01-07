@@ -127,6 +127,7 @@ exports.createTopic = (req, res, next) => {
 
     const { act, json } = req.body
     console.log(111)
+    console.log(decodeURIComponent(json))
     const body = JSON.parse(decodeURIComponent(json)).body.json
     if (body.act != 'reply') {
         const storgeKeys = [
