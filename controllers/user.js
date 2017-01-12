@@ -2,6 +2,7 @@ const { raw, cmsAPI } = require('../middleware/middleware.js')
 const { sendError, errorType, createSession, authUser, recordApi } = require('../utils/utils.js')
 const Api = require('../lib/api.js')
 const dataCache = require('../datacache.js')
+const debug = require('debug')('weapp:token')
 /*
  * @静态方法
  * @desc  获取forumkey
@@ -50,15 +51,18 @@ exports.onLogin = (req, res, next) => {
     })
     .then((data) => {
         const { key, value } = data
+        debug('第一次写入token:', key, value)
         if (!value || !key) return Promise.reject(errorType[106])
         dataCache.add(key, () => new Promise(reslove => reslove()), {
             expires: 3 * 24 * 3600 * 1000,
             sync   : 0,
             force  : false
         })
-        dataCache.set(key, value)
-        recordApi(req.requestTime, xyAppId)
-        res.json({ rs: 1, token: key })
+        return dataCache.set(key, value)
+            .then(() => {
+                recordApi(req.requestTime, xyAppId)
+                res.json({ rs: 1, token: key })
+            })
     })
     .catch((err) => {
         next(sendError(err))
@@ -176,14 +180,24 @@ exports.platformLogin = (req, res, next) => {
  * @检测微信登录、微信快速登录
  */
 exports.platformInfo = (req, res, next) => {
-    const xyAppId = req.params.appId
-    const { token } = req.body
+    let xyAppId,token
+    try {
+        xyAppId = req.params.appId
+        token = req.body.token
+    } catch(e){
+        debug("wxlogin get token err", e)
+    }
+    
+    debug("第二次准备获取token", token)
     if (!token) return next(errorType[400])
     authUser(req.body, token)
     .then(() => {
         return dataCache.get(token)
+    }, err => {
+        debug("autherror", err)
     })
     .then((data) => {
+        debug("第二次获取token的值", data)
         const { openid, nickname, sex, province, city, country, headimgurl, unionid } = data
         let options = Object.assign({
             json: encodeURIComponent(encodeURIComponent(JSON.stringify({
@@ -205,9 +219,14 @@ exports.platformInfo = (req, res, next) => {
     .then((data) => {
         recordApi(req.requestTime, xyAppId)
         if (data.body.register == 1) return Promise.reject(errorType[403])
-        res.json(Object.assign({}, data.body, { rs: 1 }))
+            
+        if (/wxLogin/.test(req.path)) {
+            return res.json(Object.assign({}, data.body, { rs: 1 }))
+        }
+        res.json(Object.assign({}, data, { rs: 1 }))
     })
     .catch((err) => {
+        console.log("err", err)
         next(sendError(err))
     })
 }

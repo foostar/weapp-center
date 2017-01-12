@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const WXBizDataCrypt = require('./WXBizDataCrypt.js')
 const dataCache = require('../datacache.js')
 const config = require('../config/index.js')
+const debug = require('debug')('weapp:token')
 /*
  * @错误信息提示
  */
@@ -46,8 +47,11 @@ const authUser = (query, token) => {
         if (!signature || !token || !rawData || !iv || !encryptedData) {
             return reject(errorType[400])
         }
+        debug('第一次准备获取token', token)
         dataCache.get(token)
         .then((result) => {
+            debug('第一次获取token的值', result)
+            if (!result) return reject({ status: 400, errcode: 102, msg: 'token过期！' })
             const sessionKey = result.session_key
             const appId = result.appid
             let pc = null
@@ -56,17 +60,17 @@ const authUser = (query, token) => {
                 pc = new WXBizDataCrypt(appId, sessionKey)
                 tmpData = pc.decryptData(encryptedData, iv)
             } catch (err) {
-                console.log('传输信息不正确')
+                debug('传输信息不正确')
                 return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             const sign = crypto.createHash('sha1').update(`${rawData}${sessionKey}`).digest('hex')
             .toString()
             if (signature != sign) {
-                console.log('签名不一致')
+                debug('签名不一致')
                 return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             if (tmpData.watermark.appid != appId) {
-                console.log('appid错误')
+                debug('appid错误')
                 return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             if (!tmpData.unionId) {
@@ -78,8 +82,9 @@ const authUser = (query, token) => {
                 sync   : 0,
                 force  : false
             })
+            debug('第二次写入token')
             /* eslint-enable */
-            dataCache.set(token, Object.assign({}, result, {
+            return dataCache.set(token, Object.assign({}, result, {
                 unionid   : tmpData.unionId,
                 openid    : tmpData.openId,
                 nickname  : tmpData.nickName,
@@ -91,6 +96,7 @@ const authUser = (query, token) => {
             }))
         })
         .then(() => {
+            debug('用户信息正确')
             return reslove({ rs: 1, msg: '用户信息正确' })
         })
         .catch(err => {
@@ -111,7 +117,7 @@ const sendError = (err) => {
  *
  */
 const recordApi = (record, appId) => {
-    if (config.showApiLog) {
+    if (process.env.showApiLog) {
         console.log(`自有服务：接口地址为：${record[0]}, appId为：${appId}, 访问时长为:${Date.now() - record[1]}毫秒`)
     }
 }

@@ -10,9 +10,11 @@ const Common = require('./controllers/common.js')
 const promiseRetry = require('promise-retry')
 const bodyParser = require('body-parser')
 const config = require('./config/index.js')
+
 const { isAuthedMiddleware } = require('./middleware/middleware.js')
 
 const app = express()
+
 app.all('*', (req, res, next) => {
     let key = req.path
     if (/client/.test(key)) {
@@ -31,7 +33,7 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
     const url = Url.parse(decodeURIComponent(req.requestTime[0].substr(8)))
     const query = url.query
     const key = query.substring(query.indexOf('=') + 1, query.indexOf('&'))
-    if(config.showApiLog) {
+    if(process.env.showApiLog) {
         console.log(`转发服务：接口地址为：${key}, appId为：${url.hash.substr(1)}, 访问时长为:${Date.now() - req.requestTime[1]}毫秒`)
     }
 })

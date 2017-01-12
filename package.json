@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "npm run build && node app",
+    "test": "npm run build && NODE_ENV=test node app",
     "build": "babel lib/DataCache.js --out-file lib/cache.js",
     "admin": "npm run build && NODE_ENV=admin node app",
     "dev": "node app"
@@ -13,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.15.2",
+    "debug": "^2.6.0",
     "express": "^4.14.0",
     "http-proxy": "^1.15.1",
     "node-fetch": "^1.6.3",
