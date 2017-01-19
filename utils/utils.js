@@ -28,9 +28,11 @@ const errorType = {
  */
 const createSession = (value) => {
     return new Promise((reslove, reject) => {
-        crypto.randomBytes(16, (err, buf) => {
+        crypto.randomBytes(8, (err, buf) => {
             if (err) reject(err)
-            const token = buf.toString('hex')
+            const token = crypto.createHash('sha1').update(`${Date.now()}${buf.toString('hex')}`).digest('hex')
+            .toString()
+            // const token = buf.toString('hex')
             reslove({ key: token, value })
         })
     })
@@ -47,11 +49,10 @@ const authUser = (query, token) => {
         if (!signature || !token || !rawData || !iv || !encryptedData) {
             return reject(errorType[400])
         }
-        debug('第一次准备获取token', token)
         dataCache.get(token)
         .then((result) => {
-            debug('第一次获取token的值', result)
-            if (!result) return reject({ status: 400, errcode: 102, msg: 'token过期！' })
+            debug('authuser取到的token', result)
+            if (!result) return Promise.reject({ status: 400, errcode: 102, msg: 'token过期！' })
             const sessionKey = result.session_key
             const appId = result.appid
             let pc = null
@@ -61,20 +62,21 @@ const authUser = (query, token) => {
                 tmpData = pc.decryptData(encryptedData, iv)
             } catch (err) {
                 debug('传输信息不正确')
-                return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
+                return Promise.reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             const sign = crypto.createHash('sha1').update(`${rawData}${sessionKey}`).digest('hex')
             .toString()
             if (signature != sign) {
                 debug('签名不一致')
-                return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
+                return Promise.reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             if (tmpData.watermark.appid != appId) {
                 debug('appid错误')
-                return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
+                return Promise.reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             if (!tmpData.unionId) {
-                return reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
+                debug('没有unionId')
+                return Promise.reject({ status: 400, errcode: 103, msg: '用户信息不正确！' })
             }
             /* eslint-disable */
             dataCache.add(token, () => new Promise((reslove) => reslove()), {
@@ -97,10 +99,10 @@ const authUser = (query, token) => {
         })
         .then(() => {
             debug('用户信息正确')
-            return reslove({ rs: 1, msg: '用户信息正确' })
+            reslove({ rs: 1, msg: '用户信息正确' })
         })
         .catch(err => {
-            return reject(err)
+            reject(err)
         })
     })
 }
@@ -117,9 +119,9 @@ const sendError = (err) => {
  *
  */
 const recordApi = (record, appId) => {
-    if (process.env.showApiLog) {
-        console.log(`自有服务：接口地址为：${record[0]}, appId为：${appId}, 访问时长为:${Date.now() - record[1]}毫秒`)
-    }
+    // if (process.env.showApiLog) {
+    //     console.log(`自有服务：接口地址为：${record[0]}, appId为：${appId}, 访问时长为:${Date.now() - record[1]}毫秒`)
+    // }
 }
 module.exports = {
     createSession,

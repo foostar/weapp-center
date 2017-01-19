@@ -22,8 +22,19 @@ const isAuthed = (appId) => {
         })
 }
 
-const isAuthedMiddleware = fn => (req, res, next) => {
-    const appId = fn(req)
+const isAuthedMiddleware = (req, res, next) => {
+    let appId = req.query.appId
+    if (/^\/api/.test(req.path)) {
+        const urlArr = req.path.split('/')
+        let result
+        for (let i = 0; i < urlArr.length; i++) {
+            result = urlArr[i]
+            if (/^\d+$/.test(result)) {
+                appId = result
+                break
+            }
+        }
+    }
     isAuthed(appId)
         .then((authed) => {
             if (authed) return next()

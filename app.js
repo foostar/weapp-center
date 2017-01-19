@@ -12,7 +12,6 @@ const bodyParser = require('body-parser')
 const createError = require('http-errors')
 const morgan = require('morgan')
 const requestIp = require('request-ip')
-const config = require('./config/index.js')
 
 const { isAuthedMiddleware } = require('./middleware/middleware.js')
 
@@ -38,20 +37,23 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
     const url = Url.parse(decodeURIComponent(req.requestTime[0].substr(8)))
     const query = url.query
     const key = query.substring(query.indexOf('=') + 1, query.indexOf('&'))
-    if(process.env.showApiLog) {
-        console.log(`转发服务：接口地址为：${key}, appId为：${url.hash.substr(1)}, 访问时长为:${Date.now() - req.requestTime[1]}毫秒`)
-    }
+    // if(process.env.showApiLog) {
+    //     console.log(`转发服务：接口地址为：${key}, appId为：${url.hash.substr(1)}, 访问时长为:${Date.now() - req.requestTime[1]}毫秒`)
+    // }
 })
 
-app.use(morgan('--- :method :url - :status\\n    TIME: :date[iso] - :response-time ms\\n    IP  : :ip\\n    UA  : :user-agent', {
-  skip(req) { return false }
-}))
+if(process.env.showApiLog) {
+    app.use(morgan('--- :method :url - :status\\n    TIME: :date[iso] - :response-time ms\\n    IP  : :ip\\n    UA  : :user-agent', {
+      skip(req) { return false }
+    }))
+}
 
 /* eslint-enable */
 /*
  * @url转发
  */
-app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) => {
+app.all('/client/:uri', isAuthedMiddleware, (req, res) => {
+    console.log(111)
     const uri = req.params.uri
     promiseRetry((retry) => {
         return proxy.web(req, res, {
@@ -68,7 +70,7 @@ app.all('/client/:uri', isAuthedMiddleware(req => req.query.appId), (req, res) =
     })
 })
 
-app.use(isAuthedMiddleware(req => req.params.appId))
+app.all('/*', isAuthedMiddleware)
 app.use(bodyParser.json())
 
 // 搜索帖子
@@ -122,14 +124,16 @@ app.get('/api/:appId/followlist', Postlist.followList)
 app.get('/api/:appId/topicdtl', Postlist.topiclist)
 /* eslint-disable */
 app.use((req, res, next) => {
+    console.log(222)
     next(createError(404))
 })
 app.use((err, req, res, next) => {
+    console.log("err", err)
     res.status(err.status || 400).json(err)
 })
 /* eslint-enable */
 // 项目启动
-if (!process.env.NODE_ENV) {
+if (!process.env.NODE_ENV || process.env.NODE_ENV == 'admin') {
     https.createServer({
         key : fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
         cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')

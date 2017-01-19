@@ -27,6 +27,7 @@ const formatList = (body) => {
             recommendAdd: x.recommendAdd || 0,
             images      : x.imageList && x.imageList.map(src => src.replace('xgsize_', 'mobcentSmallPreview_')) || new Array(x.pic_path) || [],
             zanList     : x.zanList || [],
+            verify      : x.verify || [],
             topic       : {
                 sort   : x.sort_id || '',
                 type   : x.typeId || '',
