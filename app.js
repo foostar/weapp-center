@@ -133,7 +133,7 @@ app.use((err, req, res, next) => {
 })
 /* eslint-enable */
 // 项目启动
-if (!process.env.NODE_ENV || process.env.NODE_ENV == 'admin') {
+if (!process.env.NODE_ENV) {
     https.createServer({
         key : fs.readFileSync('wildcard.apps.xiaoyun.com.key', 'utf8'),
         cert: fs.readFileSync('wildcard.apps.xiaoyun.com.crt', 'utf8')
