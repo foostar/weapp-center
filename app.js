@@ -53,7 +53,6 @@ if(process.env.showApiLog) {
  * @url转发
  */
 app.all('/client/:uri', isAuthedMiddleware, (req, res) => {
-    console.log(111)
     const uri = req.params.uri
     promiseRetry((retry) => {
         return proxy.web(req, res, {
@@ -124,7 +123,6 @@ app.get('/api/:appId/followlist', Postlist.followList)
 app.get('/api/:appId/topicdtl', Postlist.topiclist)
 /* eslint-disable */
 app.use((req, res, next) => {
-    console.log(222)
     next(createError(404))
 })
 app.use((err, req, res, next) => {
